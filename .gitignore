@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node / frontend build
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+node_modules/
+
+# Build artifacts / release packages (published as GitHub Release assets)
+dist/
+.npm-cache/
+*.tgz
+*.zip
+
+# Local runtime data and generated samples
+data/*.db
+data/*.db-*
+data/*.xlsx
+data/*.json
+
+# OS / logs
+.DS_Store
+*.log

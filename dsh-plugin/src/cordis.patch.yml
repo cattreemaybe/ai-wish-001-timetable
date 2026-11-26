@@ -1,0 +1,6 @@
+# AI-WISH timetable bundle patch: insert one host plugin row.  The Node half
+# serves the bundled web app and proxies to the bundled Python sidecar; the
+# browser half mounts the sidebar entry and iframe panel.
+- insert:
+    - id: aiwish-timetable
+      name: dsh-aiwish-timetable
