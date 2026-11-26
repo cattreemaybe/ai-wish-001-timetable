@@ -2,6 +2,8 @@
 
 **核心 V0.1 · DSH 插件 0.2.0**
 
+GitHub: [cattreemaybe/ai-wish-001-timetable](https://github.com/cattreemaybe/ai-wish-001-timetable) · Release: [v0.2.0](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0)
+
 一个可运行、可验证、可演示的新高考排课原型。它使用 **OR-Tools CP-SAT** 真实求解 31 个教学时段的课程安排，并由一个**不导入求解器模型**的独立校验器复核硬约束。
 
 > 本项目来自「DeepSeek改变世界」AI 许愿机栏目。V0.1 的目标不是商业化产品，而是把真实算法、数据模型、工作台和验证证据交给需求提出者试用与反馈。
@@ -14,8 +16,8 @@
 
 | 平台 | 原生安装包（DSH 使用） | 分发包装 |
 |---|---|---|
-| macOS arm64 | [dsh-aiwish-timetable-0.2.0.tgz](dist/dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz)（约 82MB） | [ZIP](dist/AI-WISH-001-DSH-darwin-arm64.zip) |
-| Windows x64 | [dsh-aiwish-timetable-0.2.0.tgz](dist/dsh-aiwish-timetable-win32/dsh-aiwish-timetable-0.2.0.tgz)（约 59MB） | [ZIP](dist/AI-WISH-001-DSH-win32-x64.zip) |
+| macOS arm64 | [dsh-aiwish-timetable-0.2.0-darwin-arm64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/dsh-aiwish-timetable-0.2.0-darwin-arm64.tgz)（约 82MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/AI-WISH-001-DSH-darwin-arm64.zip) |
+| Windows x64 | [dsh-aiwish-timetable-0.2.0-win32-x64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/dsh-aiwish-timetable-0.2.0-win32-x64.tgz)（约 59MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/AI-WISH-001-DSH-win32-x64.zip) |
 
 安装：
 

@@ -4,6 +4,8 @@
 
 V0.1 已完成：独立 CP-SAT 引擎、独立校验器、FastAPI + SQLite、React 工作台、Excel、A-G 场景、40 个测试和交付文档。综合场景 F（8 班 320 人）真实求解为 OPTIMAL，独立校验 0 违规。
 
+**GitHub**：<https://github.com/cattreemaybe/ai-wish-001-timetable> · **Release**：<https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0>
+
 **2026-11-26 产品形态更新**：已交付 DSH 插件 0.2.0。macOS arm64 包在隔离 DSH 0.2.2-rc.1 中完成安装、启动、排课、校验、Excel 导入导出、卸载全流程；Windows x64 包已构建并通过平台守卫/结构检查，但无 Windows 实机运行验证。DSH 只接受 `.tgz`，ZIP 仅为分发包装。
 
 ## 2. 立即接手

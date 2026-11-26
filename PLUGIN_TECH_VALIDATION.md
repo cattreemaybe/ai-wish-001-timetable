@@ -285,7 +285,13 @@ DSH_HOME=/tmp/dsh-aiwish-bundle \
 4. 为 Windows 包补自动化 CI（Windows runner）构建 + smoke test。
 5. 继续完善教师绑定、局部调课等业务能力。
 
-## 9. 交付文件与校验和
+## 9. GitHub 发布
+
+- 仓库：https://github.com/cattreemaybe/ai-wish-001-timetable
+- Release：https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0
+- Release assets：两个平台 ZIP、两个平台 tgz、安装说明与校验和。
+
+## 10. 交付文件与校验和
 
 ```text
 1da84f2b188be9a5e04d79338853fc6cf9bd1662886bd9a02bf9a2ebd9cb2e8d  dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz
