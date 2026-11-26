@@ -20,6 +20,7 @@ interface AppContextValue {
   refreshRun: () => Promise<void>
   refreshRuns: () => Promise<void>
   solve: (options?: { time_limit_seconds?: number; num_workers?: number; weights?: Record<string, number> }) => Promise<void>
+  createCustomScenario: (name?: string) => Promise<Scenario>
   setScenario: (scenario: Scenario) => void
   notify: (kind: Toast['kind'], text: string) => void
   clearToast: () => void
@@ -117,6 +118,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRuns(await api.runs(scenarioId))
   }, [scenarioId])
 
+  const createCustomScenario = useCallback(async (name?: string) => {
+    const created = await api.createCustom(name)
+    const list = await api.scenarios()
+    setScenarios(list)
+    setScenarioIdState(created.id)
+    localStorage.setItem(STORAGE_KEY, created.id)
+    setScenarioState(created)
+    setRun(null)
+    setRuns([])
+    return created
+  }, [])
+
   const solve = useCallback(async (options?: { time_limit_seconds?: number; num_workers?: number; weights?: Record<string, number> }) => {
     if (!scenario) return
     setSolving(true)
@@ -143,10 +156,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AppContextValue>(() => ({
     scenarios, scenarioId, setScenarioId, scenario, run, runs, loading, solving, error,
     toast, isStale: Boolean(scenario?.latest_run?.is_stale || run?.is_stale),
-    refreshScenario, refreshRun, refreshRuns, solve, setScenario: setScenarioState,
+    refreshScenario, refreshRun, refreshRuns, solve, createCustomScenario,
+    setScenario: setScenarioState,
     notify, clearToast: () => setToast(null),
   }), [scenarios, scenarioId, setScenarioId, scenario, run, runs, loading, solving, error,
-    toast, refreshScenario, refreshRun, refreshRuns, solve, notify])
+    toast, refreshScenario, refreshRun, refreshRuns, solve, createCustomScenario, notify])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

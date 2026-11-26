@@ -8,8 +8,10 @@
 |---|---|---|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/meta` | 版本、状态语义、假设摘要 |
-| GET | `/api/scenarios` | 场景列表 |
+| GET | `/api/scenarios` | 场景列表（含 `is_sample`） |
 | GET | `/api/scenarios/{sid}` | 场景详情 + 分析 + 最近运行 |
+| POST | `/api/scenarios/custom` | 创建空白自定义方案 |
+| GET | `/api/scenarios/{sid}/preflight` | 排课前检查（数据/资源/可排课） |
 
 ## 求解
 
@@ -37,8 +39,11 @@ Content-Type: application/json
 
 | 方法 | 路径 | Body |
 |---|---|---|
+| POST | `/api/scenarios/{sid}/students` | 手动新增学生 |
 | PATCH | `/api/scenarios/{sid}/students/{student_id}` | `language`, `first_subject`, `second_subjects`, `admin_class` |
+| POST | `/api/scenarios/{sid}/teachers` | 手动新增教师 |
 | PATCH | `/api/scenarios/{sid}/teachers/{teacher_id}` | `unavailable_slots`, `max_weekly_periods` |
+| POST | `/api/scenarios/{sid}/rooms` | 手动新增教室 |
 | PATCH | `/api/scenarios/{sid}/rooms/{room_id}` | `capacity`, `name`, `building` |
 | PUT | `/api/scenarios/{sid}/course-config` | 完整课程配置对象 |
 | PUT | `/api/scenarios/{sid}/rules` | `{"values": {...}}` |
@@ -56,8 +61,8 @@ Content-Type: application/json
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/excel/template?sid=F` | 导入模板 |
-| POST | `/api/scenarios/{sid}/import?mode=replace` | multipart `file` |
+| GET | `/api/excel/template?sid=F&sheet=students` | 分项导入模板；省略 `sheet` 为整套模板 |
+| POST | `/api/scenarios/{sid}/import?mode=merge&sheet=students` | 分项导入；`sheet=all` 或省略为整套 |
 | GET | `/api/scenarios/{sid}/export.xlsx` | 当前场景 + 最近课表 + 校验 |
 
 ## 错误语义

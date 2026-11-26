@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Cpu, Gauge, PlayCircle, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Cpu, ExternalLink, Gauge, PlayCircle, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useApp } from '../context'
 import { Badge, Card, EmptyState, PageHeader, Spinner, StatusBadge, ValidationGrid } from '../components/UI'
@@ -52,42 +53,54 @@ export default function Solve() {
         </button>} />
 
       <div className="two-col wide-left">
-        <Card title="求解参数" subtitle="V0.1 默认 8 个 worker、30 秒上限；本地 CPU 运行">
-          <div className="form-grid">
-            <label className="field">
-              <span>时间上限（秒）</span>
-              <input type="number" min={1} max={300} value={timeLimit} onChange={e => setTimeLimit(Number(e.target.value))} />
-              <small>到达上限且未找到解时标记为 UNKNOWN，不标记为无解。</small>
-            </label>
-            <label className="field">
-              <span>并行 worker</span>
-              <input type="number" min={1} max={32} value={workers} onChange={e => setWorkers(Number(e.target.value))} />
-              <small>多 worker 可加速，但结果可能受调度时序影响；固定 seed 只保证可复现实验设置。</small>
-            </label>
-          </div>
-          <div className="weights-panel">
-            <div className="mini-title"><SlidersHorizontal size={15} /> 软约束权重</div>
-            <div className="weights-grid">
-              {[
-                ['lecture_before_practice', '先正课后落实'],
-                ['teacher_idle', '减少教师空堂'],
-                ['student_walk', '减少学生走班'],
-                ['merge_small_classes', '合并小班'],
-                ['minimize_teaching_classes', '减少教学班'],
-                ['prefer_two_subject_walk', '优先两科走班'],
-              ].map(([key, label]) => (
-                <label key={key} className="weight-field">
-                  <span>{label}</span>
-                  <input type="number" min={0} max={20} step={0.5} value={Number(weights[key] ?? 0)}
-                    onChange={e => setWeights(w => ({ ...w, [key]: Number(e.target.value) }))} />
-                </label>
-              ))}
+        <Card title="开始排课" subtitle="默认参数已经适合大多数学校；高级选项通常不需要修改。">
+          <div className="solve-cta">
+            <div>
+              <strong>准备好后，直接生成课表</strong>
+              <p>系统会先检查数据、划分教学班，再调用 CP-SAT 并执行独立校验。</p>
             </div>
-            <p className="form-note">当前 V0.1 中，“先正课后落实”和“减少教师空堂”会进入 CP-SAT 目标函数；其余指标由分班阶段或结构规则决定，并作为指标输出。</p>
+            <button className="btn btn-primary" onClick={onSolve} disabled={solving}>
+              {solving ? <Spinner label="排课中" /> : <><PlayCircle size={16} />开始自动排课</>}
+            </button>
           </div>
-          <div className="form-actions">
-            <button className="btn btn-ghost" onClick={saveDefaults}>保存为场景默认参数</button>
-          </div>
+          <details className="advanced-settings">
+            <summary><SlidersHorizontal size={15} />高级算法参数（一般无需修改）</summary>
+            <div className="form-grid">
+              <label className="field">
+                <span>时间上限（秒）</span>
+                <input type="number" min={1} max={300} value={timeLimit} onChange={e => setTimeLimit(Number(e.target.value))} />
+                <small>到达上限且未找到解时标记为 UNKNOWN，不标记为无解。</small>
+              </label>
+              <label className="field">
+                <span>并行 worker</span>
+                <input type="number" min={1} max={32} value={workers} onChange={e => setWorkers(Number(e.target.value))} />
+                <small>多 worker 可加速，但结果可能受调度时序影响。</small>
+              </label>
+            </div>
+            <div className="weights-panel">
+              <div className="mini-title"><SlidersHorizontal size={15} /> 软约束权重</div>
+              <div className="weights-grid">
+                {[
+                  ['lecture_before_practice', '先正课后落实'],
+                  ['teacher_idle', '减少教师空堂'],
+                  ['student_walk', '减少学生走班'],
+                  ['merge_small_classes', '合并小班'],
+                  ['minimize_teaching_classes', '减少教学班'],
+                  ['prefer_two_subject_walk', '优先两科走班'],
+                ].map(([key, label]) => (
+                  <label key={key} className="weight-field">
+                    <span>{label}</span>
+                    <input type="number" min={0} max={20} step={0.5} value={Number(weights[key] ?? 0)}
+                      onChange={e => setWeights(w => ({ ...w, [key]: Number(e.target.value) }))} />
+                  </label>
+                ))}
+              </div>
+              <p className="form-note">这些是算法优化偏好，不是业务硬约束。普通排课保持默认即可。</p>
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-ghost" onClick={saveDefaults}>保存为场景默认参数</button>
+            </div>
+          </details>
         </Card>
 
         <Card title="求解结果" subtitle="最近一次运行">
@@ -118,6 +131,14 @@ export default function Solve() {
                 </div>
               )}
               {run.validation && <ValidationGrid validation={run.validation} />}
+              {run.status === 'solved' && (
+                <div className="result-next">
+                  <span>下一步</span>
+                  <Link className="btn btn-sm btn-ghost" to="/timetable/admin"><ExternalLink size={14} />查看行政班课表</Link>
+                  <Link className="btn btn-sm btn-ghost" to="/timetable/student"><ExternalLink size={14} />查看学生课表</Link>
+                  <Link className="btn btn-sm btn-primary" to="/excel">导出 Excel</Link>
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState title="尚未生成课表" description="点击“运行求解”，系统会先建班、再调用 CP-SAT、最后执行独立校验。" />

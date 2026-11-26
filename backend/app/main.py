@@ -5,6 +5,7 @@ computes a timetable itself; every solve call goes through `run_scenario`.
 """
 from __future__ import annotations
 
+import copy
 import os
 from urllib.parse import quote
 from pathlib import Path
@@ -19,8 +20,10 @@ from pydantic import BaseModel, Field
 from aiwish.data_gen import build_all_scenarios, scenario_summaries
 from aiwish.domain import (
     LANGUAGES, FIRST_SUBJECTS, SECOND_SUBJECTS, SUBJECTS, Scenario,
+    DEFAULT_COURSE_CONFIG, DEFAULT_RULES,
     build_default_time_slots, default_time_model, validate_scenario_shape,
 )
+from aiwish.preflight import preflight_scenario
 from aiwish.runner import run_scenario, validate_result
 
 from .db import Database
@@ -31,6 +34,31 @@ from .serializers import (
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = os.environ.get("AIWISH_DB", str(ROOT / "data" / "aiwish.db"))
+
+
+class CustomScenarioRequest(BaseModel):
+    name: str | None = None
+
+
+class StudentCreate(BaseModel):
+    name: str
+    admin_class: str
+    language: str
+    first_subject: str
+    second_subjects: list[str]
+
+
+class TeacherCreate(BaseModel):
+    name: str
+    subject: str
+    unavailable_slots: list[str] = Field(default_factory=list)
+    max_weekly_periods: int | None = Field(default=None, ge=1, le=60)
+
+
+class RoomCreate(BaseModel):
+    name: str
+    capacity: int = Field(ge=1, le=500)
+    building: str = "教学楼"
 
 
 class SolveRequest(BaseModel):
@@ -95,6 +123,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
     def scenario_payload(doc: dict[str, Any]) -> dict[str, Any]:
         view = scenario_view(doc)
+        view["is_sample"] = doc["id"] in "ABCDEFG"
         latest = db.latest_run(doc["id"])
         view["latest_run"] = {
             "run_id": latest["run_id"], "status": latest["status"],
@@ -139,8 +168,15 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             if not doc:
                 continue
             latest = db.latest_run(sid)
-            item = dict(summaries.get(sid, {"id": sid, "name": sid}))
+            item = dict(summaries.get(sid, {
+                "id": sid, "name": doc.get("name", sid),
+                "description": doc.get("description", ""),
+                "kind": "custom",
+            }))
             item.update({
+                "name": doc.get("name", item.get("name", sid)),
+                "description": doc.get("description", ""),
+                "is_sample": sid in "ABCDEFG",
                 "updated_at": row["updated_at"],
                 "student_count": len(doc.get("students", [])),
                 "teacher_count": len(doc.get("teachers", [])),
@@ -159,6 +195,37 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     @app.get("/api/scenarios/{sid}")
     def get_scenario(sid: str) -> dict[str, Any]:
         return scenario_payload(get_doc_or_404(sid))
+
+    @app.post("/api/scenarios/custom")
+    def create_custom_scenario(body: CustomScenarioRequest) -> dict[str, Any]:
+        existing = {row["id"] for row in db.list_scenarios()}
+        i = 1
+        while f"MY{i:02d}" in existing:
+            i += 1
+        sid = f"MY{i:02d}"
+        name = (body.name or "").strip() or ("我的排课方案" + ("" if i == 1 else f" {i}"))
+        scenario = Scenario(
+            id=sid, name=name,
+            description="从空白数据开始创建：导入或手动录入学生、教师、教室，再配置课程、时间与规则。",
+            seed=20261126 + i,
+            time_model=default_time_model(),
+            course_config=copy.deepcopy(DEFAULT_COURSE_CONFIG),
+            students=[], teachers=[], rooms=[],
+            rules=copy.deepcopy(DEFAULT_RULES),
+            notes="自定义方案；未导入真实数据前不应排课。",
+            assumption_tags=["自定义方案", "数据由用户导入或手动录入"],
+        )
+        db.save_scenario_doc(sid, scenario.to_dict())
+        return scenario_payload(get_doc_or_404(sid))
+
+    @app.get("/api/scenarios/{sid}/preflight")
+    def preflight(sid: str) -> dict[str, Any]:
+        doc = get_doc_or_404(sid)
+        try:
+            scenario = Scenario.from_dict(doc)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(422, f"场景数据无法加载：{exc}") from exc
+        return preflight_scenario(scenario)
 
     @app.post("/api/scenarios/{sid}/reset")
     def reset_scenario(sid: str) -> dict[str, Any]:
@@ -194,6 +261,83 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             student["second_subjects"] = subs
         if body.admin_class is not None and body.admin_class.strip():
             student["admin_class"] = body.admin_class.strip()
+        save_doc(doc)
+        return scenario_payload(get_doc_or_404(doc["id"]))
+
+    @app.post("/api/scenarios/{sid}/students")
+    def add_student(sid: str, body: StudentCreate) -> dict[str, Any]:
+        doc = get_doc_or_404(sid)
+        if body.language not in LANGUAGES:
+            raise HTTPException(422, "外语必须是英语或日语")
+        if body.first_subject not in FIRST_SUBJECTS:
+            raise HTTPException(422, "首选科目必须是物理或历史")
+        if (len(body.second_subjects) != 2 or len(set(body.second_subjects)) != 2
+                or any(s not in SECOND_SUBJECTS for s in body.second_subjects)):
+            raise HTTPException(422, "再选科目必须从生物/化学/地理/政治中选两科且不重复")
+        name = body.name.strip()
+        admin = body.admin_class.strip()
+        if not name or not admin:
+            raise HTTPException(422, "姓名和行政班不能为空")
+        nums = []
+        for s in doc["students"]:
+            if str(s.get("id", "")).startswith("S") and str(s.get("id", ""))[1:].isdigit():
+                nums.append(int(str(s["id"])[1:]))
+        new_id = f"S{(max(nums) + 1) if nums else 1:03d}"
+        doc["students"].append({
+            "id": new_id, "name": name, "admin_class": admin,
+            "language": body.language, "first_subject": body.first_subject,
+            "second_subjects": body.second_subjects,
+        })
+        save_doc(doc)
+        return scenario_payload(get_doc_or_404(doc["id"]))
+
+    @app.post("/api/scenarios/{sid}/teachers")
+    def add_teacher(sid: str, body: TeacherCreate) -> dict[str, Any]:
+        doc = get_doc_or_404(sid)
+        if body.subject not in SUBJECTS:
+            raise HTTPException(422, "教师科目无效")
+        valid_labels = {s["label"] for s in doc["time_model"]["slots"]}
+        unknown = [x for x in body.unavailable_slots if x not in valid_labels]
+        if unknown:
+            raise HTTPException(422, f"非法时段: {unknown[:3]}")
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(422, "教师姓名不能为空")
+        code = {
+            "语文": "CN", "数学": "MA", "英语": "EN", "日语": "JP", "物理": "PH",
+            "历史": "HI", "生物": "BI", "化学": "CH", "地理": "GE", "政治": "PO",
+        }.get(body.subject, "XX")
+        nums = []
+        for t in doc["teachers"]:
+            tid = str(t.get("id", ""))
+            if tid.startswith(f"T-{code}-") and tid.split("-")[-1].isdigit():
+                nums.append(int(tid.split("-")[-1]))
+        new_id = f"T-{code}-{(max(nums) + 1) if nums else 1:02d}"
+        doc["teachers"].append({
+            "id": new_id, "name": name, "subject": body.subject,
+            "unavailable_slots": sorted(set(body.unavailable_slots)),
+            "candidate_subjects": [body.subject],
+            "max_weekly_periods": body.max_weekly_periods,
+        })
+        save_doc(doc)
+        return scenario_payload(get_doc_or_404(doc["id"]))
+
+    @app.post("/api/scenarios/{sid}/rooms")
+    def add_room(sid: str, body: RoomCreate) -> dict[str, Any]:
+        doc = get_doc_or_404(sid)
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(422, "教室名称不能为空")
+        nums = []
+        for r in doc["rooms"]:
+            rid = str(r.get("id", ""))
+            if rid.startswith("ROOM-") and rid.split("-")[-1].isdigit():
+                nums.append(int(rid.split("-")[-1]))
+        new_id = f"ROOM-{(max(nums) + 1) if nums else 1:03d}"
+        doc["rooms"].append({
+            "id": new_id, "name": name, "capacity": body.capacity,
+            "building": body.building.strip() or "教学楼",
+        })
         save_doc(doc)
         return scenario_payload(get_doc_or_404(doc["id"]))
 
@@ -505,9 +649,11 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         )
 
     @app.get("/api/excel/template")
-    def excel_template(sid: str = Query("F")) -> Response:
+    def excel_template(sid: str = Query("F"), sheet: str | None = Query(None)) -> Response:
         doc = get_doc_or_404(sid)
-        data = template_workbook(doc)
+        if sheet not in (None, "students", "teachers", "rooms", "courses"):
+            raise HTTPException(422, "sheet 必须是 students/teachers/rooms/courses")
+        data = template_workbook(doc, only_sheet=sheet)
         filename = f"AI-WISH-001_{doc['id']}_导入模板.xlsx"
         return Response(
             content=data,
@@ -517,15 +663,19 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
     @app.post("/api/scenarios/{sid}/import")
     async def import_excel(
-        sid: str, file: UploadFile = File(...), mode: str = Query("replace")
+        sid: str, file: UploadFile = File(...), mode: str = Query("replace"),
+        sheet: str | None = Query(None),
     ) -> dict[str, Any]:
         doc = get_doc_or_404(sid)
         if mode not in ("replace", "merge"):
             raise HTTPException(422, "mode 必须是 replace 或 merge")
+        if sheet not in (None, "all", "students", "teachers", "rooms", "courses"):
+            raise HTTPException(422, "sheet 必须是 students/teachers/rooms/courses/all")
         content = await file.read()
         if len(content) > 20 * 1024 * 1024:
             raise HTTPException(413, "Excel 文件不得超过20MB")
-        new_doc, errors, summary = import_workbook(content, doc, mode)
+        only = None if sheet in (None, "all") else sheet
+        new_doc, errors, summary = import_workbook(content, doc, mode, only_sheet=only)
         if errors:
             return JSONResponse(status_code=422, content={"ok": False, "errors": errors[:50], "summary": summary})
         save_doc(new_doc)

@@ -3,6 +3,7 @@ import { Filter, Pencil, Search, UsersRound } from 'lucide-react'
 import { api } from '../api'
 import { useApp } from '../context'
 import { Badge, Card, Modal, PageHeader } from '../components/UI'
+import ImportActions from '../components/ImportActions'
 import type { Student } from '../types'
 
 const LANGS = ['英语', '日语']
@@ -36,22 +37,41 @@ export default function Students() {
   const rows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
   const classes = [...new Set(scenario.students.map(s => s.admin_class))].sort()
 
+  const startNew = () => {
+    setEditing({
+      id: '', name: '', admin_class: classes[0] || '高一(1)班',
+      language: '英语', first_subject: '物理', second_subjects: ['生物', '化学'],
+    })
+  }
+
   const save = async () => {
     if (!editing) return
     if (editing.second_subjects[0] === editing.second_subjects[1]) {
       notify('error', '两门再选科目不能相同')
       return
     }
+    if (!editing.name.trim() || !editing.admin_class.trim()) {
+      notify('error', '姓名和行政班不能为空')
+      return
+    }
     try {
-      const updated = await api.patchStudent(scenario.id, editing.id, {
-        language: editing.language,
-        first_subject: editing.first_subject,
-        second_subjects: editing.second_subjects,
-        admin_class: editing.admin_class,
-      })
+      const updated = editing.id
+        ? await api.patchStudent(scenario.id, editing.id, {
+          language: editing.language,
+          first_subject: editing.first_subject,
+          second_subjects: editing.second_subjects,
+          admin_class: editing.admin_class,
+        })
+        : await api.addStudent(scenario.id, {
+          name: editing.name.trim(),
+          admin_class: editing.admin_class.trim(),
+          language: editing.language,
+          first_subject: editing.first_subject,
+          second_subjects: editing.second_subjects,
+        })
       setScenario(updated)
       setEditing(null)
-      notify('success', '学生选科已更新；旧课表已标记为待重算')
+      notify('success', editing.id ? '学生选科已更新；旧课表已标记为待重算' : '学生已新增；旧课表已标记为待重算')
     } catch (e) {
       notify('error', e instanceof Error ? e.message : String(e))
     }
@@ -62,6 +82,12 @@ export default function Students() {
       <PageHeader eyebrow="基础数据" title="学生及选科管理"
         description="行政班已固定。每名学生选择外语、首选科目和两门再选科目；修改后需要重新排课。"
         actions={<Badge tone="blue"><UsersRound size={14} /> {scenario.students.length} 名学生</Badge>} />
+
+      <div className="data-actions-bar">
+        <ImportActions scenarioId={scenario.id} sheet="students"
+          onImported={updated => { setScenario(updated); notify('success', '学生数据已导入；旧课表需重新排课') }}
+          onManualAdd={startNew} />
+      </div>
 
       <div className="filter-bar">
         <div className="search-box"><Search size={16} /><input placeholder="搜索学号或姓名" value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} /></div>
@@ -110,7 +136,8 @@ export default function Students() {
         </div>
       </Card>
 
-      <Modal open={!!editing} title="编辑学生选科" subtitle={editing ? `${editing.id} · ${editing.name}` : ''}
+      <Modal open={!!editing} title={editing?.id ? '编辑学生选科' : '新增学生'}
+        subtitle={editing ? (editing.id ? `${editing.id} · ${editing.name}` : '填写学生基本信息与选科') : ''}
         onClose={() => setEditing(null)}
         footer={<><button className="btn btn-ghost" onClick={() => setEditing(null)}>取消</button><button className="btn btn-primary" onClick={save}>保存修改</button></>}>
         {editing && (

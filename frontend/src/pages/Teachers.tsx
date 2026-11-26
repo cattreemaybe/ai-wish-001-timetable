@@ -3,6 +3,7 @@ import { CalendarOff, Pencil, Search, UserRound, UsersRound } from 'lucide-react
 import { api } from '../api'
 import { useApp } from '../context'
 import { Badge, Card, Modal, PageHeader } from '../components/UI'
+import ImportActions from '../components/ImportActions'
 import type { Teacher } from '../types'
 
 export default function Teachers() {
@@ -10,6 +11,7 @@ export default function Teachers() {
   const [search, setSearch] = useState('')
   const [subject, setSubject] = useState('')
   const [editing, setEditing] = useState<Teacher | null>(null)
+  const [adding, setAdding] = useState<{ name: string; subject: string } | null>(null)
   const [bindings, setBindings] = useState<Record<string, string>>({})
   const [bindingBusy, setBindingBusy] = useState(false)
 
@@ -57,6 +59,22 @@ export default function Teachers() {
     })
   }
 
+  const saveNew = async () => {
+    if (!adding) return
+    if (!adding.name.trim()) {
+      notify('error', '教师姓名不能为空')
+      return
+    }
+    try {
+      const updated = await api.addTeacher(scenario.id, { name: adding.name.trim(), subject: adding.subject })
+      setScenario(updated)
+      setAdding(null)
+      notify('success', '教师已新增；可在列表中继续设置不可排时间')
+    } catch (e) {
+      notify('error', e instanceof Error ? e.message : String(e))
+    }
+  }
+
   const save = async () => {
     if (!editing) return
     try {
@@ -77,6 +95,12 @@ export default function Teachers() {
       <PageHeader eyebrow="基础数据" title="教师及可用时间管理"
         description="V0.1 优先采用预先绑定与自动分配。教师不可排时间会作为硬约束进入 CP-SAT，并在独立校验器中复核。"
         actions={<Badge tone="green"><UsersRound size={14} /> {scenario.teachers.length} 名候选教师</Badge>} />
+
+      <div className="data-actions-bar">
+        <ImportActions scenarioId={scenario.id} sheet="teachers"
+          onImported={updated => { setScenario(updated); notify('success', '教师数据已导入；旧课表需重新排课') }}
+          onManualAdd={() => setAdding({ name: '', subject: '语文' })} />
+      </div>
 
       <div className="teacher-summary">
         {subjects.map(s => (
@@ -147,6 +171,18 @@ export default function Teachers() {
           </table>
         </div>
       </Card>
+
+      <Modal open={!!adding} title="新增教师" subtitle="先录入基本信息，再在列表中设置不可排时间。"
+        onClose={() => setAdding(null)}
+        footer={<><button className="btn btn-ghost" onClick={() => setAdding(null)}>取消</button><button className="btn btn-primary" onClick={saveNew}>新增教师</button></>}>
+        {adding && (
+          <div className="form-grid">
+            <label className="field"><span>姓名</span><input value={adding.name} placeholder="例如：王老师" onChange={e => setAdding({ ...adding, name: e.target.value })} /></label>
+            <label className="field"><span>科目</span><select value={adding.subject} onChange={e => setAdding({ ...adding, subject: e.target.value })}>{['语文','数学','英语','日语','物理','历史','生物','化学','地理','政治'].map(s => <option key={s}>{s}</option>)}</select></label>
+            <div className="form-note span-2">新教师默认全时段可用。保存后点列表里的编辑按钮，可以设置不可排时间。</div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={!!editing} wide title="设置教师不可排时间"
         subtitle={editing ? `${editing.id} · ${editing.name} · ${editing.subject}` : ''}

@@ -3,6 +3,7 @@ import { AppProvider } from './context'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Solve from './pages/Solve'
+import Prepare from './pages/Prepare'
 import ValidationPage from './pages/ValidationPage'
 import Students from './pages/Students'
 import Teachers from './pages/Teachers'
@@ -21,6 +22,7 @@ export default function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/prepare" element={<Prepare />} />
             <Route path="/solve" element={<Solve />} />
             <Route path="/validation" element={<ValidationPage />} />
             <Route path="/students" element={<Students />} />

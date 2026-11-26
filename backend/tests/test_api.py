@@ -121,3 +121,132 @@ def test_hard_constraints_cannot_be_disabled(tmp_path):
     assert r.status_code == 422
     r = client.put("/api/scenarios/A/rules", json={"values": {"enabled_hard_constraints": []}})
     assert r.status_code == 422
+
+
+def test_custom_scenario_and_preflight(tmp_path):
+    client = make_client(tmp_path)
+    r = client.post("/api/scenarios/custom", json={"name": "我的学校"})
+    assert r.status_code == 200
+    doc = r.json()
+    sid = doc["id"]
+    assert doc["is_sample"] is False
+    assert doc["students"] == []
+    listed = {x["id"]: x for x in client.get("/api/scenarios").json()}
+    assert listed[sid]["name"] == "我的学校"
+    assert listed[sid]["is_sample"] is False
+    pre = client.get(f"/api/scenarios/{sid}/preflight").json()
+    assert pre["ready"] is False
+    assert pre["status"] == "blocked"
+    assert {i["key"] for i in pre["items"]} >= {"students", "teachers", "rooms", "courses", "time", "rules"}
+    # Manual add
+    assert client.post(f"/api/scenarios/{sid}/students", json={
+        "name": "张三", "admin_class": "高一(1)班", "language": "英语",
+        "first_subject": "物理", "second_subjects": ["生物", "化学"],
+    }).status_code == 200
+    assert client.post(f"/api/scenarios/{sid}/teachers", json={
+        "name": "王老师", "subject": "语文",
+    }).status_code == 200
+    assert client.post(f"/api/scenarios/{sid}/rooms", json={
+        "name": "A101", "capacity": 50,
+    }).status_code == 200
+    after = client.get(f"/api/scenarios/{sid}").json()
+    assert len(after["students"]) == 1
+    assert len(after["teachers"]) == 1
+    assert len(after["rooms"]) == 1
+
+
+def test_per_sheet_import_does_not_overwrite_other_categories(tmp_path):
+    from aiwish.data_gen import build_all_scenarios
+    from app.excel_io import template_workbook
+
+    client = make_client(tmp_path)
+    sid = client.post("/api/scenarios/custom", json={"name": "分项导入"}).json()["id"]
+    source = build_all_scenarios()["F"].to_dict()
+    for sheet in ("students", "teachers", "rooms"):
+        data = template_workbook(source, only_sheet=sheet)
+        r = client.post(
+            f"/api/scenarios/{sid}/import?mode=replace&sheet={sheet}",
+            files={"file": (f"{sheet}.xlsx", data,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert r.status_code == 200, r.text
+        current = client.get(f"/api/scenarios/{sid}").json()
+        assert len(current["students"]) == (2 if sheet == "students" else current["students"].__len__())
+        if sheet == "students":
+            assert len(current["teachers"]) == 0
+            assert len(current["rooms"]) == 0
+        if sheet == "teachers":
+            assert len(current["teachers"]) == 2
+            assert len(current["rooms"]) == 0
+        if sheet == "rooms":
+            assert len(current["rooms"]) == 2
+    # courses only should leave the other lists intact
+    data = template_workbook(source, only_sheet="courses")
+    r = client.post(
+        f"/api/scenarios/{sid}/import?mode=replace&sheet=courses",
+        files={"file": ("courses.xlsx", data,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert r.status_code == 200
+    current = client.get(f"/api/scenarios/{sid}").json()
+    assert len(current["students"]) == 2
+    assert len(current["teachers"]) == 2
+    assert len(current["rooms"]) == 2
+    assert len(current["course_config"]) >= 10
+
+
+def test_preflight_blocks_resource_shortage(tmp_path):
+    client = make_client(tmp_path)
+    pre = client.get("/api/scenarios/G/preflight").json()
+    assert pre["ready"] is False
+    assert "资源" in pre["message"]
+
+
+def test_sheet_templates_are_scoped(tmp_path):
+    from openpyxl import load_workbook
+    import io
+    client = make_client(tmp_path)
+    r = client.get("/api/excel/template?sid=F&sheet=students")
+    assert r.status_code == 200
+    wb = load_workbook(io.BytesIO(r.content), data_only=True)
+    assert "学生" in wb.sheetnames
+    assert "教师" not in wb.sheetnames
+    assert "课程配置" not in wb.sheetnames
+
+
+def test_import_feedback_reports_duplicates_and_missing(tmp_path):
+    from aiwish.data_gen import build_all_scenarios
+    from app.excel_io import template_workbook
+    from openpyxl import load_workbook
+    import io
+    client = make_client(tmp_path)
+    sid = client.post("/api/scenarios/custom", json={"name": "反馈测试"}).json()["id"]
+    source = build_all_scenarios()["F"].to_dict()
+    data = template_workbook(source, only_sheet="students")
+    wb = load_workbook(io.BytesIO(data))
+    ws = wb["学生"]
+    # Keep two rows but duplicate the first student id.
+    ws.cell(row=3, column=1, value=ws.cell(row=2, column=1).value)
+    buf = io.BytesIO(); wb.save(buf)
+    r = client.post(
+        f"/api/scenarios/{sid}/import?mode=merge&sheet=students",
+        files={"file": ("dup.xlsx", buf.getvalue(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert r.status_code == 200, r.text
+    summary = r.json()["summary"]
+    assert summary["duplicates"]
+    assert summary["students"] == 1
+    # Missing name should fail without writing.
+    data = template_workbook(source, only_sheet="students")
+    wb = load_workbook(io.BytesIO(data))
+    wb["学生"].cell(row=2, column=2, value="")
+    buf = io.BytesIO(); wb.save(buf)
+    r = client.post(
+        f"/api/scenarios/{sid}/import?mode=merge&sheet=students",
+        files={"file": ("missing.xlsx", buf.getvalue(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert r.status_code == 422
+    assert r.json()["summary"]["failed_rows"] >= 1
+    assert len(client.get(f"/api/scenarios/{sid}").json()["students"]) == 1

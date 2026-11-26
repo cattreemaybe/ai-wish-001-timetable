@@ -5,9 +5,9 @@
 ## 1. 包完整性
 
 ```powershell
-Get-FileHash .\dsh-aiwish-timetable-0.2.0.tgz -Algorithm SHA256
-tar -tzf .\dsh-aiwish-timetable-0.2.0.tgz | Select-String "runtime/python.exe"
-tar -tzf .\dsh-aiwish-timetable-0.2.0.tgz | Select-String "runtime/Lib/site-packages/ortools"
+Get-FileHash .\dsh-aiwish-timetable-0.2.1.tgz -Algorithm SHA256
+tar -tzf .\dsh-aiwish-timetable-0.2.1.tgz | Select-String "runtime/python.exe"
+tar -tzf .\dsh-aiwish-timetable-0.2.1.tgz | Select-String "runtime/Lib/site-packages/ortools"
 ```
 
 预期：
@@ -33,7 +33,7 @@ tar -tzf .\dsh-aiwish-timetable-0.2.0.tgz | Select-String "runtime/Lib/site-pack
 ## 3. DSH 安装
 
 ```powershell
-dsh plugin --profile desktop add C:\path\dsh-aiwish-timetable-0.2.0.tgz
+dsh plugin --profile desktop add C:\path\dsh-aiwish-timetable-0.2.1.tgz
 dsh --profile desktop
 ```
 

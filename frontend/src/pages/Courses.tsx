@@ -3,6 +3,7 @@ import { BookOpenCheck, Pencil, Plus, Trash2 } from 'lucide-react'
 import { api } from '../api'
 import { useApp } from '../context'
 import { Badge, Card, Modal, PageHeader } from '../components/UI'
+import ImportActions from '../components/ImportActions'
 import { subjectStyle } from '../theme'
 import type { CourseComponent, CourseConfig } from '../types'
 
@@ -74,6 +75,11 @@ export default function Courses() {
       <PageHeader eyebrow="基础数据" title="课程课时配置"
         description="默认按需求资料配置。每名学生每周合计 31 节：语文 5、数学 8、外语 6、首选 4、两门再选各 4。"
         actions={<Badge tone="blue"><BookOpenCheck size={14} /> {subjects.length} 个科目</Badge>} />
+
+      <div className="data-actions-bar">
+        <ImportActions scenarioId={scenario.id} sheet="courses"
+          onImported={updated => { setScenario(updated); notify('success', '课程配置已导入；旧课表需重新排课') }} />
+      </div>
 
       <Card title="行政班基础与外语" subtitle="语文、数学、外语由行政班或外语教学班组织">
         {renderCards(baseSubjects)}

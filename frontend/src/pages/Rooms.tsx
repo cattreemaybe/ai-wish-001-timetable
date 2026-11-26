@@ -3,11 +3,13 @@ import { DoorOpen, Pencil } from 'lucide-react'
 import { api } from '../api'
 import { useApp } from '../context'
 import { Badge, Card, MetricCard, Modal, PageHeader } from '../components/UI'
+import ImportActions from '../components/ImportActions'
 import type { Room } from '../types'
 
 export default function Rooms() {
   const { scenario, setScenario, run, notify } = useApp()
   const [editing, setEditing] = useState<Room | null>(null)
+  const [adding, setAdding] = useState<{ name: string; capacity: number; building: string } | null>(null)
 
   const usage = useMemo(() => {
     const map: Record<string, number> = {}
@@ -19,6 +21,24 @@ export default function Rooms() {
   const totalSeats = scenario.rooms.reduce((s, r) => s + r.capacity, 0)
   const maxCap = Math.max(...scenario.rooms.map(r => r.capacity))
   const large = scenario.rooms.filter(r => r.capacity >= 60).length
+
+  const saveNew = async () => {
+    if (!adding) return
+    if (!adding.name.trim()) {
+      notify('error', '教室名称不能为空')
+      return
+    }
+    try {
+      const updated = await api.addRoom(scenario.id, {
+        name: adding.name.trim(), capacity: adding.capacity, building: adding.building,
+      })
+      setScenario(updated)
+      setAdding(null)
+      notify('success', '教室已新增；请重新检查资源与排课')
+    } catch (e) {
+      notify('error', e instanceof Error ? e.message : String(e))
+    }
+  }
 
   const save = async () => {
     if (!editing) return
@@ -38,6 +58,12 @@ export default function Rooms() {
     <>
       <PageHeader eyebrow="基础数据" title="教室资源管理"
         description="走班教学班按最大班额 54 人配置到 60 座教室；容量变化会直接改变建班可行性。" />
+
+      <div className="data-actions-bar">
+        <ImportActions scenarioId={scenario.id} sheet="rooms"
+          onImported={updated => { setScenario(updated); notify('success', '教室数据已导入；旧课表需重新排课') }}
+          onManualAdd={() => setAdding({ name: '', capacity: 45, building: '教学楼' })} />
+      </div>
 
       <div className="metrics-grid four">
         <MetricCard label="教室总数" value={scenario.rooms.length} hint="A/B/C 三座" icon={<DoorOpen size={18} />} />
@@ -62,6 +88,19 @@ export default function Rooms() {
           ))}
         </div>
       </Card>
+
+      <Modal open={!!adding} title="新增教室" subtitle="容量会作为硬约束参与排课。"
+        onClose={() => setAdding(null)}
+        footer={<><button className="btn btn-ghost" onClick={() => setAdding(null)}>取消</button><button className="btn btn-primary" onClick={saveNew}>新增教室</button></>}>
+        {adding && (
+          <div className="form-grid">
+            <label className="field"><span>教室名称</span><input value={adding.name} placeholder="例如：A101" onChange={e => setAdding({ ...adding, name: e.target.value })} /></label>
+            <label className="field"><span>容量</span><input type="number" min={1} max={500} value={adding.capacity} onChange={e => setAdding({ ...adding, capacity: Number(e.target.value) })} /></label>
+            <label className="field"><span>楼栋</span><input value={adding.building} onChange={e => setAdding({ ...adding, building: e.target.value })} /></label>
+            <div className="form-note">导入或新增教室只会影响教室数据，不会覆盖学生和教师。</div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={!!editing} title="编辑教室"
         subtitle={editing ? editing.id : ''} onClose={() => setEditing(null)}

@@ -3,13 +3,14 @@ import { CheckCircle2, Download, FileSpreadsheet, Upload, TriangleAlert } from '
 import { useApp } from '../context'
 import { API_ROOT } from '../api'
 import { Badge, Card, PageHeader } from '../components/UI'
+import type { ImportSummary } from '../types'
 
 export default function Excel() {
   const { scenario, run, isStale, refreshScenario, notify } = useApp()
   const [mode, setMode] = useState('replace')
   const [busy, setBusy] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
-  const [summary, setSummary] = useState<Record<string, number> | null>(null)
+  const [summary, setSummary] = useState<ImportSummary | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   if (!scenario) return <div className="loading-block">正在加载…</div>
@@ -41,7 +42,7 @@ export default function Excel() {
   return (
     <>
       <PageHeader eyebrow="数据交换" title="Excel 导入导出"
-        description="导出包含场景基础数据、四类课表、教学班和校验报告；导入只替换基础数据，不导入旧课表。"
+        description="整套导入导出与备份。学生、教师、教室页面已提供分项导入；本页用于整套备份/恢复。"
         actions={<Badge tone={run?.validation?.passed ? 'green' : 'neutral'}>{run ? '当前课表可导出' : '基础数据可导出'}</Badge>} />
 
       <div className="two-col">
@@ -88,6 +89,13 @@ export default function Excel() {
           </div>
           {summary && (
             <div className="inline-success"><CheckCircle2 size={16} /><span>已导入：学生 {summary.students}、教师 {summary.teachers}、教室 {summary.rooms}、课程配置 {summary.course_rows} 行</span></div>
+          )}
+          {summary && (summary.duplicates?.length > 0 || summary.failed_rows > 0) && (
+            <div className="import-errors">
+              <div className="error-head"><TriangleAlert size={16} /><strong>导入结果提示</strong></div>
+              {summary.failed_rows > 0 && <p>失败行：{summary.failed_rows}</p>}
+              {summary.duplicates?.map((x, i) => <p key={i}>{x}</p>)}
+            </div>
           )}
           {errors.length > 0 && (
             <div className="import-errors">

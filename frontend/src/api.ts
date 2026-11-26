@@ -1,6 +1,7 @@
 import type {
-  RunResult, RunSummary, Scenario, ScenarioSummary, Student, Teacher,
+  RunResult, RunSummary, Scenario, ScenarioSummary, Student, Teacher, Room,
   TimetableResponse, ViewKey, EntityOption, Validation, CourseConfig,
+  PreflightResult, ImportSummary,
 } from './types'
 
 export const API_ROOT = window.location.pathname.startsWith('/plugins/aiwish/') ? '/plugins/aiwish' : ''
@@ -26,6 +27,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   scenarios: () => request<ScenarioSummary[]>('/api/scenarios'),
   scenario: (sid: string) => request<Scenario>(`/api/scenarios/${sid}`),
+  createCustom: (name?: string) => request<Scenario>('/api/scenarios/custom', {
+    method: 'POST', body: JSON.stringify({ name: name || null }),
+  }),
+  preflight: (sid: string) => request<PreflightResult>(`/api/scenarios/${sid}/preflight`),
   resetScenario: (sid: string) => request<Scenario>(`/api/scenarios/${sid}/reset`, { method: 'POST' }),
   solve: (sid: string, options?: { time_limit_seconds?: number; num_workers?: number; weights?: Record<string, number> }) =>
     request<RunResult>(`/api/scenarios/${sid}/solve`, {
@@ -39,9 +44,21 @@ export const api = {
     request<EntityOption[]>(`/api/runs/${runId}/entities?view=${view}`),
   timetable: (runId: string, view: ViewKey, entityId: string) =>
     request<TimetableResponse>(`/api/runs/${runId}/timetable?view=${view}&entity_id=${encodeURIComponent(entityId)}`),
+  addStudent: (sid: string, student: Omit<Student, 'id'>) =>
+    request<Scenario>(`/api/scenarios/${sid}/students`, {
+      method: 'POST', body: JSON.stringify(student),
+    }),
   patchStudent: (sid: string, studentId: string, patch: Partial<Student>) =>
     request<Scenario>(`/api/scenarios/${sid}/students/${studentId}`, {
       method: 'PATCH', body: JSON.stringify(patch),
+    }),
+  addTeacher: (sid: string, teacher: { name: string; subject: string; unavailable_slots?: string[]; max_weekly_periods?: number | null }) =>
+    request<Scenario>(`/api/scenarios/${sid}/teachers`, {
+      method: 'POST', body: JSON.stringify(teacher),
+    }),
+  addRoom: (sid: string, room: { name: string; capacity: number; building?: string }) =>
+    request<Scenario>(`/api/scenarios/${sid}/rooms`, {
+      method: 'POST', body: JSON.stringify(room),
     }),
   patchTeacher: (sid: string, teacherId: string, patch: Partial<Teacher>) =>
     request<Scenario>(`/api/scenarios/${sid}/teachers/${teacherId}`, {
@@ -67,6 +84,19 @@ export const api = {
     request<Scenario>(`/api/scenarios/${sid}/teacher-bindings`, {
       method: 'PATCH', body: JSON.stringify({ bindings }),
     }),
+  importData: async (sid: string, file: File, sheet: string, mode = 'merge') => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${API_ROOT}/api/scenarios/${sid}/import?mode=${mode}&sheet=${sheet}`, { method: 'POST', body: form })
+    const body = await res.json()
+    if (!res.ok) throw new Error((body.errors || [body.detail || '导入失败']).join('；'))
+    return body as { ok: boolean; summary: ImportSummary; scenario: Scenario }
+  },
+}
+
+export function templateUrl(sid: string, sheet?: string) {
+  const suffix = sheet ? `&sheet=${sheet}` : ''
+  return `${API_ROOT}/api/excel/template?sid=${sid}${suffix}`
 }
 
 export function downloadUrl(path: string) {

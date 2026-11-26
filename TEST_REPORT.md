@@ -1,7 +1,7 @@
 # TEST REPORT · 真实测试结果
 
 测试日期：2026-11-25（Asia/Shanghai）
-项目版本：V0.1.0
+项目版本：V0.1.0 · DSH 插件 0.2.1
 
 ## 1. 环境
 
@@ -30,7 +30,7 @@ PYTHONPATH=engine:backend .venv/bin/pytest
 结果：
 
 ```text
-40 passed, 1 warning in ~11s
+45 passed, 1 warning in ~12s
 ```
 
 覆盖：
@@ -48,7 +48,7 @@ PYTHONPATH=engine:backend .venv/bin/pytest
 
 ```text
 ✓ 1598 modules transformed
-dist/assets/index-*.js  268.28 kB │ gzip: 81.50 kB
+dist/assets/index-*.js  293.29 kB │ gzip: 88.25 kB
 ```
 
 浏览器巡检：15 个页面全部加载，无 console error / pageerror；教师不可排时间弹窗、学生编辑弹窗、课表、校验页均正常。
@@ -245,7 +245,7 @@ DSH CLI / Desktop：0.2.2-rc.1，macOS Apple Silicon。
 | 步骤 | 结果 |
 |---|---|
 | 全新 `DSH_HOME` + web profile | 初始化成功 |
-| 安装 `dsh-aiwish-timetable-0.2.0.tgz`（82MB） | 成功，pnpm 约 1.8s |
+| 安装 `dsh-aiwish-timetable-0.2.1.tgz`（82MB） | 成功，pnpm 约 1.8s |
 | 启动 DSH web | 侧边栏出现「智能排课」 |
 | iframe 加载 | H1「新高考智能走班排课工作台」，无 console error |
 | 内置 Python | `diag.python` 指向插件 `runtime/bin/python3`，非系统 Python |
@@ -274,7 +274,61 @@ Windows x64 包：
 
 ## 14. 更新后的测试结论
 
-- 核心 40 个 pytest 全通过。
+- 核心 45 个 pytest 全通过。
 - 前端生产构建通过（hash router + plugin base）。
 - macOS DSH 插件安装、启动、排课、校验、Excel、卸载通过。
 - Windows 插件包结构完成，但运行验证仍为待办，不能标记为“已支持”。
+
+
+## 15. V0.1 工作台 UX 验收
+
+测试时间：2026-11-26，使用 Chrome Headless + Playwright，真实启动 FastAPI + React 工作台。
+
+### 路径 A：示例数据体验
+
+1. 首次打开出现两个选择；
+2. 点击「使用示例数据体验」；
+3. 首页显示「示例数据」标记、6/6 排课准备完成；
+4. 点击「排课前检查」→「配置完整，可以自动排课」；
+5. 点击「自动排课」→ `OPTIMAL`；
+6. 结果页显示「查看行政班课表 / 查看学生课表 / 导出 Excel」；
+7. 行政班课表加载，57 个课表格任务；
+8. Excel 页面出现导出链接。
+
+结果：通过，无 console error。
+
+### 路径 B：创建自己的方案 + 分项导入
+
+1. 首次打开点击「创建自己的排课方案」；
+2. 进入 `/prepare`，顶部显示「我的方案」，3 项数据缺失提示；
+3. 学生页导入 320 行 → 报告「失败 0 / 重复 0 / 错误 0」；
+4. 教师页导入 62 行；
+5. 教室页导入 26 行；
+6. 排课准备 6/6，预检「配置完整，可以自动排课」；
+7. 自动排课 → `OPTIMAL`。
+
+结果：通过，无 console error。
+
+### 手动新增
+
+- 学生页「手动新增」→ 新增 1 名学生；
+- 教师页「手动新增」→ 新增 1 名教师；
+- 教室页「手动新增」→ 新增 1 间教室；
+- 三处均成功，无 console error。
+
+### 导入反馈
+
+后端测试覆盖：
+
+- 重复学号 → `duplicates` 非空，跳过重复行；
+- 缺姓名字段 → 422，`failed_rows >= 1`，原方案不变；
+- 分项导入学生/教师/教室/课程 → 其他类别数量保持不变；
+- 空白模板导入 → 拒绝，不清空原数据。
+
+### 自动化测试总数
+
+```text
+45 passed, 1 warning in ~12s
+```
+
+新增测试覆盖：自定义方案、预检、手动新增、分项导入、模板范围、重复/缺失反馈。

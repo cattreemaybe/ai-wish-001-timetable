@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../context'
 import { subjectStyle } from '../theme'
 import { Badge, Card, EmptyState, MetricCard, PageHeader, StatusBadge, ValidationGrid } from '../components/UI'
+import PreparationPanel from '../components/PreparationPanel'
 
 function pct(n: number) {
   return `${Math.round(n * 100)}%`
@@ -61,6 +62,8 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      <PreparationPanel compact />
 
       <div className="metrics-grid">
         <MetricCard label="学生" value={a.student_count} hint={`${a.admin_class_count} 个行政班`} icon={<UsersRound size={18} />} />

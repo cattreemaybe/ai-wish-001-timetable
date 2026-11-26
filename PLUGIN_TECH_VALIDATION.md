@@ -153,13 +153,13 @@ DSH_HOME=/tmp/dsh-aiwish-bundle \
 
 DSH_HOME=/tmp/dsh-aiwish-bundle \
   dsh plugin --profile aiwish add \
-  dist/dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz
+  dist/dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.1.tgz
 ```
 
 结果：
 
 ```text
-+ dsh-aiwish-timetable 0.2.0
++ dsh-aiwish-timetable 0.2.1
 Done in 1.8s
 ```
 
@@ -281,21 +281,21 @@ DSH_HOME=/tmp/dsh-aiwish-bundle \
 
 1. 在 Windows 10/11 x64 实机执行 `PLUGIN_WINDOWS_ACCEPTANCE.md` 清单。
 2. 如 DSH 后续提供官方 sidebar slot API，替换 DOM 注入。
-3. 如需 npm 发布，`dsh-aiwish-timetable@0.2.0` 可直接发布；平台包可用同版本不同 dist-tag/包名或按平台分仓库。
+3. 如需 npm 发布，`dsh-aiwish-timetable@0.2.1` 可直接发布；平台包可用同版本不同 dist-tag/包名或按平台分仓库。
 4. 为 Windows 包补自动化 CI（Windows runner）构建 + smoke test。
 5. 继续完善教师绑定、局部调课等业务能力。
 
 ## 9. GitHub 发布
 
 - 仓库：https://github.com/cattreemaybe/ai-wish-001-timetable
-- Release：https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0
+- Release：https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.1
 - Release assets：两个平台 ZIP、两个平台 tgz、安装说明与校验和。
 
 ## 10. 交付文件与校验和
 
 ```text
-1da84f2b188be9a5e04d79338853fc6cf9bd1662886bd9a02bf9a2ebd9cb2e8d  dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz
-a328cba38fec1bc11d8432cedc1b6a115700fde460b8672d484afb6978fdf288  dsh-aiwish-timetable-win32/dsh-aiwish-timetable-0.2.0.tgz
-69c7cc255deb38859e96b9051dc9fe8d1f58cc3704ff7d0e8196ff04f8fbd312  AI-WISH-001-DSH-darwin-arm64.zip
-aa7adb1aeb3731ee3ff0442bbd055d70992090c90baf0893a084017f51563d12  AI-WISH-001-DSH-win32-x64.zip
+ec5c935342bea73c0cd5eef97c981a2a5b1bc03263a4a313533c429cdbc2a7ac  dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.1.tgz
+e6d4f4a39eb93347adc09da57fec63c560bbab2c3aff14850dd41799ea34363b  dsh-aiwish-timetable-win32/dsh-aiwish-timetable-0.2.1.tgz
+d9793dbd22f523ef16b54c813c16bdee2cf67cecdebbaf723753e693b192b3ce  AI-WISH-001-DSH-darwin-arm64.zip
+0ee1372f585c3c32f321cea0a8d625920d8543eac003343321a119e274b26d41  AI-WISH-001-DSH-win32-x64.zip
 ```

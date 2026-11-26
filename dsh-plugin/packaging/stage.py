@@ -78,7 +78,7 @@ def main() -> int:
 
     package = {
         "name": "dsh-aiwish-timetable",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "description": "AI-WISH 新高考智能走班排课工作台（DSH 插件，本地 CP-SAT）",
         "type": "module",
         "main": "lib/index.js",

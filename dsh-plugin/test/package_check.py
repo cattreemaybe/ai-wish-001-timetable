@@ -46,7 +46,7 @@ def check_package(folder: str, platform: str, python_rel: str) -> None:
 def check_zip(zip_path: Path, expected_tgz_hash: str) -> None:
     with zipfile.ZipFile(zip_path) as zf:
         names = zf.namelist()
-        assert "dsh-aiwish-timetable-0.2.0.tgz" in names
+        assert "dsh-aiwish-timetable-0.2.1.tgz" in names
         data = zf.read("SHA256SUMS.txt").decode("utf-8")
         assert expected_tgz_hash in data
         assert "INSTALL.md" in names
@@ -57,9 +57,9 @@ def main() -> int:
     check_package("dsh-aiwish-timetable-darwin", "darwin", "runtime/bin/python3")
     check_package("dsh-aiwish-timetable-win32", "win32", "runtime/python.exe")
     check_zip(DIST / "AI-WISH-001-DSH-darwin-arm64.zip",
-              sha256(DIST / "dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz"))
+              sha256(DIST / "dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.1.tgz"))
     check_zip(DIST / "AI-WISH-001-DSH-win32-x64.zip",
-              sha256(DIST / "dsh-aiwish-timetable-win32/dsh-aiwish-timetable-0.2.0.tgz"))
+              sha256(DIST / "dsh-aiwish-timetable-win32/dsh-aiwish-timetable-0.2.1.tgz"))
     # Windows binary structure
     win = DIST / "dsh-aiwish-timetable-win32/runtime"
     assert (win / "python.exe").read_bytes()[:2] == b"MZ"

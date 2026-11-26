@@ -5,47 +5,49 @@ import {
   Sparkles, Table2, UserRound, UsersRound, Wand2,
 } from 'lucide-react'
 import { useApp } from '../context'
-import { StatusBadge, Spinner } from './UI'
+import { Badge, StatusBadge, Spinner } from './UI'
+import FirstRunDialog from './FirstRunDialog'
 
 const groups = [
   {
-    label: '工作台',
+    label: '开始',
     items: [
       { to: '/', label: '排课总览', icon: LayoutDashboard, end: true },
-      { to: '/solve', label: '自动排课', icon: PlayCircle },
-      { to: '/validation', label: '校验结果', icon: CheckCircle2 },
+      { to: '/prepare', label: '排课准备', icon: ListChecks },
     ],
   },
   {
-    label: '基础数据',
+    label: '数据准备',
     items: [
-      { to: '/students', label: '学生选科', icon: UsersRound },
-      { to: '/teachers', label: '教师资源', icon: UserRound },
-      { to: '/courses', label: '课程课时', icon: BookOpenCheck },
+      { to: '/students', label: '学生与选科', icon: UsersRound },
+      { to: '/teachers', label: '教师与任课', icon: UserRound },
+      { to: '/courses', label: '课程与课时', icon: BookOpenCheck },
       { to: '/rooms', label: '教室资源', icon: DoorOpen },
-      { to: '/time-model', label: '时间模型', icon: CalendarDays },
+      { to: '/time-model', label: '上课时间', icon: CalendarDays },
     ],
   },
   {
-    label: '走班与规则',
+    label: '规则与排课',
     items: [
-      { to: '/classes', label: '教学班', icon: ClipboardList },
       { to: '/rules', label: '排课规则', icon: Settings2 },
+      { to: '/solve', label: '自动排课', icon: PlayCircle },
     ],
   },
   {
-    label: '课表视图',
+    label: '课表与结果',
     items: [
       { to: '/timetable/admin', label: '行政班课表', icon: Table2 },
       { to: '/timetable/student', label: '学生课表', icon: GraduationCap },
       { to: '/timetable/teacher', label: '教师课表', icon: UserRound },
       { to: '/timetable/room', label: '教室课表', icon: House },
+      { to: '/classes', label: '教学班', icon: ClipboardList },
+      { to: '/validation', label: '校验结果', icon: CheckCircle2 },
     ],
   },
   {
-    label: '数据交换',
+    label: '数据与备份',
     items: [
-      { to: '/excel', label: 'Excel 导入导出', icon: FileSpreadsheet },
+      { to: '/excel', label: 'Excel 数据交换', icon: FileSpreadsheet },
     ],
   },
 ]
@@ -108,9 +110,10 @@ export default function Layout() {
           <div className="scenario-switch">
             <label>当前场景</label>
             <select value={scenarioId} onChange={e => setScenarioId(e.target.value)}>
-              {scenarios.map(s => <option key={s.id} value={s.id}>{s.id} · {s.name.replace(/^[A-G] · /, '')}</option>)}
+              {scenarios.map(s => <option key={s.id} value={s.id}>{s.id} · {s.name.replace(/^[A-G] · /, '')}{s.is_sample ? '（示例）' : ''}</option>)}
             </select>
             {loading && <Spinner />}
+            {scenario?.is_sample ? <Badge tone="amber">示例数据</Badge> : scenario ? <Badge tone="blue">我的方案</Badge> : null}
           </div>
           <div className="topbar-right">
             {isStale && <span className="stale-chip">数据已修改，课表待重算</span>}
@@ -124,6 +127,8 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <FirstRunDialog />
 
       {toast && (
         <div className={`toast toast-${toast.kind}`} onClick={clearToast}>

@@ -1,8 +1,8 @@
 # AI-WISH-001 · 新高考智能走班排课工作台
 
-**核心 V0.1 · DSH 插件 0.2.0**
+**核心 V0.1 · DSH 插件 0.2.1**
 
-GitHub: [cattreemaybe/ai-wish-001-timetable](https://github.com/cattreemaybe/ai-wish-001-timetable) · Release: [v0.2.0](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0)
+GitHub: [cattreemaybe/ai-wish-001-timetable](https://github.com/cattreemaybe/ai-wish-001-timetable) · Release: [v0.2.1](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.1)
 
 一个可运行、可验证、可演示的新高考排课原型。它使用 **OR-Tools CP-SAT** 真实求解 31 个教学时段的课程安排，并由一个**不导入求解器模型**的独立校验器复核硬约束。
 
@@ -16,8 +16,8 @@ GitHub: [cattreemaybe/ai-wish-001-timetable](https://github.com/cattreemaybe/ai-
 
 | 平台 | 原生安装包（DSH 使用） | 分发包装 |
 |---|---|---|
-| macOS arm64 | [dsh-aiwish-timetable-0.2.0-darwin-arm64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/dsh-aiwish-timetable-0.2.0-darwin-arm64.tgz)（约 82MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/AI-WISH-001-DSH-darwin-arm64.zip) |
-| Windows x64 | [dsh-aiwish-timetable-0.2.0-win32-x64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/dsh-aiwish-timetable-0.2.0-win32-x64.tgz)（约 59MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.0/AI-WISH-001-DSH-win32-x64.zip) |
+| macOS arm64 | [dsh-aiwish-timetable-0.2.1-darwin-arm64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.1/dsh-aiwish-timetable-0.2.1-darwin-arm64.tgz)（约 82MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.1/AI-WISH-001-DSH-darwin-arm64.zip) |
+| Windows x64 | [dsh-aiwish-timetable-0.2.1-win32-x64.tgz](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.1/dsh-aiwish-timetable-0.2.1-win32-x64.tgz)（约 59MB） | [ZIP](https://github.com/cattreemaybe/ai-wish-001-timetable/releases/download/v0.2.1/AI-WISH-001-DSH-win32-x64.zip) |
 
 安装：
 
@@ -29,7 +29,7 @@ GitHub: [cattreemaybe/ai-wish-001-timetable](https://github.com/cattreemaybe/ai-
 命令行等价：
 
 ```bash
-dsh plugin --profile desktop add /absolute/path/dsh-aiwish-timetable-0.2.0.tgz
+dsh plugin --profile desktop add /absolute/path/dsh-aiwish-timetable-0.2.1.tgz
 ```
 
 **重要协议限制**：DSH 0.2.2-rc.1 的插件管理器只接受 npm tarball（`.tgz`）、本地目录、npm 包名和 Git 地址，**不支持把 `.zip` 直接作为安装源**。因此 ZIP 只是分发包装，不能声称可被 DSH 直接导入。
@@ -43,6 +43,58 @@ dsh plugin --profile desktop add /absolute/path/dsh-aiwish-timetable-0.2.0.tgz
 - macOS Apple Silicon：安装、侧边栏、iframe、排课、独立校验、Excel 导入导出、卸载全部实测通过。
 - Windows x64：包结构、平台声明、Python/OR-Tools DLL 结构检查通过；**无 Windows 实机，未执行运行验证**。
 - 插件 UI 通过 DSH 侧边栏 DOM 注入 + 同源 iframe；DSH 升级后需回归。
+
+## 0.1 教务老师怎么使用（V0.1 UX 优化）
+
+### 第一次打开
+
+工作台提供两个明确选择：
+
+- **使用示例数据体验**：直接加载综合场景 F，所有示例数据在顶部和首页都有「示例数据」标记；
+- **创建自己的排课方案**：从空白方案开始，示例数据不会被当成学校数据。
+
+### 首页「排课准备」
+
+首页新增排课准备区，按老师的工作顺序列出 6 项：
+
+1. 学生与选科
+2. 教师与任课
+3. 教室资源
+4. 课程与课时
+5. 上课时间
+6. 排课规则
+
+每项显示当前数量、缺失信息和直接入口。点击「排课前检查」后，系统会用普通老师能理解的语言区分：
+
+- 数据配置不完整
+- 教师/教室资源不足
+- 资源可行，可以自动排课
+
+只有检查通过（或只有非阻断提示）才建议点击「自动排课」。
+
+### 分项 Excel 导入
+
+学生、教师、教室、课程页面顶部都提供：
+
+- 下载本类别 Excel 模板
+- 导入本类别 Excel
+- 手动新增
+- 编辑现有数据
+
+分项导入只更新该类别，**不会覆盖其他类别**；整套备份/恢复仍在「Excel 数据交换」页。
+
+导入后会显示成功数量、失败行、重复数据、缺失字段及原因。导入失败时不写入，原方案保持不变。
+
+### 高级设置
+
+时间上限、worker、软约束权重放在自动排课页的「高级算法参数」折叠区，普通用户保持默认即可。
+
+#### 验收路径
+
+- 路径 A：首次打开 → 示例数据 → 排课前检查 → 自动排课 → 查看课表 → 导出 Excel；
+- 路径 B：创建自己的方案 → 下载/导入学生、教师、教室 → 检查课程与规则 → 自动排课 → 查看并导出。
+
+两条路径均已用浏览器自动化走通，详见 [TEST_REPORT.md](TEST_REPORT.md#15-v01-工作台-ux-验收)。
 
 ## 1. 独立源码运行（保留形态）
 
@@ -237,7 +289,7 @@ AI-WISH-001/
 ├── frontend/               # React + TypeScript 工作台
 ├── dsh-plugin/             # DSH 宿主/客户端/打包脚本/运行时说明
 ├── dist/                   # 平台 tgz 与 ZIP 分发包装
-├── backend/tests/          # 40 个自动化测试
+├── backend/tests/          # 45 个自动化测试
 ├── docs/screenshots/       # 演示截图
 ├── start.sh / dev.sh / test.sh
 ├── PLUGIN_TECH_VALIDATION.md

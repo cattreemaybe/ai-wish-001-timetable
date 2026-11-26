@@ -2,11 +2,11 @@
 
 ## 1. 一句话状态
 
-V0.1 已完成：独立 CP-SAT 引擎、独立校验器、FastAPI + SQLite、React 工作台、Excel、A-G 场景、40 个测试和交付文档。综合场景 F（8 班 320 人）真实求解为 OPTIMAL，独立校验 0 违规。
+V0.1 已完成：独立 CP-SAT 引擎、独立校验器、FastAPI + SQLite、React 工作台、Excel、A-G 场景、45 个测试和交付文档。综合场景 F（8 班 320 人）真实求解为 OPTIMAL，独立校验 0 违规。
 
-**GitHub**：<https://github.com/cattreemaybe/ai-wish-001-timetable> · **Release**：<https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.0>
+**GitHub**：<https://github.com/cattreemaybe/ai-wish-001-timetable> · **Release**：<https://github.com/cattreemaybe/ai-wish-001-timetable/releases/tag/v0.2.1>
 
-**2026-11-26 产品形态更新**：已交付 DSH 插件 0.2.0。macOS arm64 包在隔离 DSH 0.2.2-rc.1 中完成安装、启动、排课、校验、Excel 导入导出、卸载全流程；Windows x64 包已构建并通过平台守卫/结构检查，但无 Windows 实机运行验证。DSH 只接受 `.tgz`，ZIP 仅为分发包装。
+**2026-11-26 产品形态更新**：已交付 DSH 插件 0.2.1。macOS arm64 包在隔离 DSH 0.2.2-rc.1 中完成安装、启动、排课、校验、Excel 导入导出、卸载全流程；Windows x64 包已构建并通过平台守卫/结构检查，但无 Windows 实机运行验证。DSH 只接受 `.tgz`，ZIP 仅为分发包装。
 
 ## 2. 立即接手
 
@@ -14,9 +14,9 @@ V0.1 已完成：独立 CP-SAT 引擎、独立校验器、FastAPI + SQLite、Rea
 
 ```bash
 # macOS arm64
-dsh plugin --profile desktop add /absolute/path/dist/dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.0.tgz
+dsh plugin --profile desktop add /absolute/path/dist/dsh-aiwish-timetable-darwin/dsh-aiwish-timetable-0.2.1.tgz
 # Windows x64
-dsh plugin --profile desktop add C:\absolute\path\dist\dsh-aiwish-timetable-win32\dsh-aiwish-timetable-0.2.0.tgz
+dsh plugin --profile desktop add C:\absolute\path\dist\dsh-aiwish-timetable-win32\dsh-aiwish-timetable-0.2.1.tgz
 ```
 
 刷新 DSH → 侧边栏「智能排课」。
@@ -67,6 +67,9 @@ PYTHONPATH=engine .venv/bin/python -m aiwish.cli run F --summary
 - 总览、自动排课、校验、学生、教师、课程、教室、时间模型、教学班、规则、四类课表、Excel。
 - 本地 SQLite 保存场景快照与运行历史。
 - 学生选科编辑、教师不可排时间 42 格编辑、基础科教师绑定、课程课时编辑、教室容量编辑。
+- 首页排课准备 6 项清单、排课前检查、示例/自有方案首次引导。
+- 学生/教师/教室/课程页面分项导入、模板、手动新增；整套导入导出保留。
+- 高级算法参数折叠，普通流程不暴露。
 - 规则页可启停待确认的走班组 cap、调整软约束权重。
 - Excel 模板、导入、导出（含四类课表与校验报告）。
 
@@ -77,6 +80,16 @@ PYTHONPATH=engine .venv/bin/python -m aiwish.cli run F --summary
 - 包产物：`dist/dsh-aiwish-timetable-darwin/*.tgz`、`dist/dsh-aiwish-timetable-win32/*.tgz`。
 - 分发 ZIP：`dist/AI-WISH-001-DSH-darwin-arm64.zip`、`dist/AI-WISH-001-DSH-win32-x64.zip`。
 - 详细验证：`PLUGIN_TECH_VALIDATION.md`。
+
+### UX 优化（2026-11-26）
+
+- 首页「排课准备」+ `/prepare`：6 项状态、数量、缺失信息、直达入口。
+- 首次打开：示例数据 / 创建自己的方案；示例数据全链路标记。
+- 分项导入：学生、教师、教室、课程各自模板和导入，不覆盖其他类别。
+- 导入反馈：成功数、失败行、重复、缺失字段、错误原因。
+- 预检：数据不完整 / 资源不足 / 可排课，普通老师语言。
+- 导航按准备 → 规则 → 排课 → 结果 → 导出组织。
+- 高级参数默认折叠。
 
 ### 文档
 
@@ -102,7 +115,7 @@ README / REQUIREMENTS / ASSUMPTIONS / TEST_REPORT / DEV_LOG / HANDOFF / AGENTS /
 - F：320 学生、8 班、24 组合、41 教学班、218 任务、0 硬约束违规、OPTIMAL、约 0.16s。
 - G：物理教师 1 人，预检无解，不生成课表。
 - cap=2：F 需要 4 个物理班但只有 3 名教师，预检无解。
-- 40 tests passed。
+- 45 tests passed。
 - Excel 导出约 360KB，导出→导入往返成功。
 - 浏览器 15 页无 console error。
 

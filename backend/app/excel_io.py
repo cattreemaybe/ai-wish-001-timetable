@@ -15,7 +15,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from aiwish.domain import (
-    LANGUAGES, FIRST_SUBJECTS, SECOND_SUBJECTS, Scenario, validate_scenario_shape,
+    LANGUAGES, FIRST_SUBJECTS, SECOND_SUBJECTS, SUBJECTS, Scenario, validate_scenario_shape,
 )
 
 HEADER_FILL = PatternFill("solid", fgColor="1F3A5F")
@@ -284,7 +284,7 @@ def _validation_sheet(wb: Workbook, result: dict[str, Any]) -> None:
     _autosize(ws)
 
 
-def template_workbook(doc: dict[str, Any]) -> bytes:
+def template_workbook(doc: dict[str, Any], only_sheet: str | None = None) -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
     intro = _sheet(wb, "填写说明")
@@ -303,46 +303,47 @@ def template_workbook(doc: dict[str, Any]) -> bytes:
         c.alignment = Alignment(wrap_text=True, vertical="top")
         intro.row_dimensions[i].height = 34
 
-    ws = _sheet(wb, "学生")
-    _header(ws, 1, ["学号", "姓名", "行政班", "外语", "首选科目", "再选1", "再选2"])
-    samples = doc.get("students", [])[:2]
-    for i, s in enumerate(samples, start=2):
-        for j, v in enumerate([s["id"], s["name"], s["admin_class"], s["language"],
-                               s["first_subject"], s["second_subjects"][0],
-                               s["second_subjects"][1]], start=1):
-            _cell(ws, i, j, v)
-    ws.freeze_panes = "A2"
-    _autosize(ws)
-
-    ws = _sheet(wb, "教师")
-    _header(ws, 1, ["工号", "姓名", "科目", "不可排时间", "候选科目", "周课时上限"])
-    for i, t in enumerate(doc.get("teachers", [])[:2], start=2):
-        for j, v in enumerate([t["id"], t["name"], t["subject"],
-                               "；".join(t.get("unavailable_slots", [])),
-                               "、".join(t.get("candidate_subjects", [t["subject"]])),
-                               t.get("max_weekly_periods") or ""], start=1):
-            _cell(ws, i, j, v)
-    ws.freeze_panes = "A2"
-    _autosize(ws)
-
-    ws = _sheet(wb, "教室")
-    _header(ws, 1, ["教室编号", "教室名称", "容量", "楼栋"])
-    for i, r in enumerate(doc.get("rooms", [])[:2], start=2):
-        for j, v in enumerate([r["id"], r["name"], r["capacity"], r.get("building", "")], start=1):
-            _cell(ws, i, j, v)
-    ws.freeze_panes = "A2"
-    _autosize(ws)
-
-    ws = _sheet(wb, "课程配置")
-    _header(ws, 1, ["科目", "细分课程", "周课时", "类型"])
-    r = 2
-    for subject, comps in doc.get("course_config", {}).items():
-        for c in comps:
-            for j, v in enumerate([subject, c["name"], c["hours"], c.get("kind", "")], start=1):
-                _cell(ws, r, j, v)
-            r += 1
-    ws.freeze_panes = "A2"
-    _autosize(ws)
+    if only_sheet in (None, "students"):
+        ws = _sheet(wb, "学生")
+        _header(ws, 1, ["学号", "姓名", "行政班", "外语", "首选科目", "再选1", "再选2"])
+        samples = doc.get("students", [])[:2]
+        for i, s in enumerate(samples, start=2):
+            for j, v in enumerate([s["id"], s["name"], s["admin_class"], s["language"],
+                                   s["first_subject"], s["second_subjects"][0],
+                                   s["second_subjects"][1]], start=1):
+                _cell(ws, i, j, v)
+        ws.freeze_panes = "A2"
+        _autosize(ws)
+    if only_sheet in (None, "teachers"):
+        ws = _sheet(wb, "教师")
+        _header(ws, 1, ["工号", "姓名", "科目", "不可排时间", "候选科目", "周课时上限"])
+        for i, t in enumerate(doc.get("teachers", [])[:2], start=2):
+            for j, v in enumerate([t["id"], t["name"], t["subject"],
+                                   "；".join(t.get("unavailable_slots", [])),
+                                   "、".join(t.get("candidate_subjects", [t["subject"]])),
+                                   t.get("max_weekly_periods") or ""], start=1):
+                _cell(ws, i, j, v)
+        ws.freeze_panes = "A2"
+        _autosize(ws)
+    if only_sheet in (None, "rooms"):
+        ws = _sheet(wb, "教室")
+        _header(ws, 1, ["教室编号", "教室名称", "容量", "楼栋"])
+        for i, r in enumerate(doc.get("rooms", [])[:2], start=2):
+            for j, v in enumerate([r["id"], r["name"], r["capacity"], r.get("building", "")], start=1):
+                _cell(ws, i, j, v)
+        ws.freeze_panes = "A2"
+        _autosize(ws)
+    if only_sheet in (None, "courses"):
+        ws = _sheet(wb, "课程配置")
+        _header(ws, 1, ["科目", "细分课程", "周课时", "类型"])
+        r = 2
+        for subject, comps in doc.get("course_config", {}).items():
+            for c in comps:
+                for j, v in enumerate([subject, c["name"], c["hours"], c.get("kind", "")], start=1):
+                    _cell(ws, r, j, v)
+                r += 1
+        ws.freeze_panes = "A2"
+        _autosize(ws)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -383,9 +384,14 @@ def _split_list(value: Any) -> list[str]:
     return [x.strip() for x in text.split("|") if x.strip()]
 
 
-def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") -> tuple[dict[str, Any], list[str], dict[str, int]]:
+def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace", only_sheet: str | None = None) -> tuple[dict[str, Any], list[str], dict[str, Any]]:
     errors: list[str] = []
-    summary = {"students": 0, "teachers": 0, "rooms": 0, "course_rows": 0}
+    duplicates: list[str] = []
+    warnings: list[str] = []
+    summary: dict[str, Any] = {
+        "students": 0, "teachers": 0, "rooms": 0, "course_rows": 0,
+        "duplicates": duplicates, "warnings": warnings, "failed_rows": 0,
+    }
     try:
         wb = load_workbook(io.BytesIO(content), data_only=True)
     except Exception as exc:  # noqa: BLE001
@@ -393,10 +399,11 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
     out = dict(doc)
 
     student_sheet = next((n for n in ("学生", "学生选科") if n in wb.sheetnames), None)
-    if student_sheet:
+    if only_sheet in (None, "students") and student_sheet:
         ws = wb[student_sheet]
         rows = _read_rows(ws, ["学号", "姓名", "行政班", "外语"])
         students = []
+        seen_students: set[str] = set()
         for idx, row in enumerate(rows, start=2):
             sid = str(row.get("学号") or "").strip()
             name = str(row.get("姓名") or "").strip()
@@ -407,18 +414,27 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
             sec2 = str(row.get("再选2") or "").strip()
             if not all([sid, name, admin, lang, first, sec1, sec2]):
                 errors.append(f"学生表第{idx}行存在空单元格")
+                summary["failed_rows"] += 1
                 continue
+            if sid in seen_students:
+                duplicates.append(f"学生表学号重复：{sid}")
+                continue
+            seen_students.add(sid)
             if lang not in LANGUAGES:
                 errors.append(f"学生表第{idx}行外语无效：{lang}")
             if first not in FIRST_SUBJECTS:
                 errors.append(f"学生表第{idx}行首选科目无效：{first}")
             if sec1 not in SECOND_SUBJECTS or sec2 not in SECOND_SUBJECTS or sec1 == sec2:
                 errors.append(f"学生表第{idx}行再选科目无效：{sec1}/{sec2}")
+            if lang not in LANGUAGES or first not in FIRST_SUBJECTS or sec1 not in SECOND_SUBJECTS or sec2 not in SECOND_SUBJECTS or sec1 == sec2:
+                summary["failed_rows"] += 1
             students.append({
                 "id": sid, "name": name, "admin_class": admin,
                 "language": lang, "first_subject": first,
                 "second_subjects": [sec1, sec2],
             })
+        if not students:
+            errors.append("学生表没有可导入的数据")
         if not errors:
             existing = {s["id"]: s for s in out.get("students", [])} if mode == "merge" else {}
             for s in students:
@@ -427,16 +443,25 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
             summary["students"] = len(students)
 
     teacher_sheet = next((n for n in ("教师", "教师资源") if n in wb.sheetnames), None)
-    if teacher_sheet:
+    if only_sheet in (None, "teachers") and teacher_sheet:
         ws = wb[teacher_sheet]
         rows = _read_rows(ws, ["工号", "姓名", "科目"])
         teachers = []
+        seen_teachers: set[str] = set()
         for idx, row in enumerate(rows, start=2):
             tid = str(row.get("工号") or "").strip()
             name = str(row.get("姓名") or "").strip()
             subject = str(row.get("科目") or "").strip()
             if not all([tid, name, subject]):
                 errors.append(f"教师表第{idx}行缺少工号/姓名/科目")
+                summary["failed_rows"] += 1
+                continue
+            if tid in seen_teachers:
+                duplicates.append(f"教师表工号重复：{tid}")
+                continue
+            seen_teachers.add(tid)
+            if subject not in SUBJECTS:
+                errors.append(f"教师表第{idx}行科目无效：{subject}")
                 continue
             teachers.append({
                 "id": tid, "name": name, "subject": subject,
@@ -444,6 +469,8 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
                 "candidate_subjects": _split_list(row.get("候选科目")) or [subject],
                 "max_weekly_periods": int(row["周课时上限"]) if str(row.get("周课时上限") or "").strip().isdigit() else None,
             })
+        if not teachers:
+            errors.append("教师表没有可导入的数据")
         if not errors:
             existing = {t["id"]: t for t in out.get("teachers", [])} if mode == "merge" else {}
             for t in teachers:
@@ -452,17 +479,23 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
             summary["teachers"] = len(teachers)
 
     room_sheet = next((n for n in ("教室", "教室资源") if n in wb.sheetnames), None)
-    if room_sheet:
+    if only_sheet in (None, "rooms") and room_sheet:
         ws = wb[room_sheet]
         rows = _read_rows(ws, ["教室编号", "教室名称", "容量"])
         rooms = []
+        seen_rooms: set[str] = set()
         for idx, row in enumerate(rows, start=2):
             rid = str(row.get("教室编号") or "").strip()
             name = str(row.get("教室名称") or "").strip()
             cap_raw = row.get("容量")
             if not rid or not name or cap_raw is None or str(cap_raw).strip() == "":
                 errors.append(f"教室表第{idx}行缺少编号/名称/容量")
+                summary["failed_rows"] += 1
                 continue
+            if rid in seen_rooms:
+                duplicates.append(f"教室表编号重复：{rid}")
+                continue
+            seen_rooms.add(rid)
             try:
                 cap = int(float(str(cap_raw)))
             except ValueError:
@@ -470,6 +503,8 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
                 continue
             rooms.append({"id": rid, "name": name, "capacity": cap,
                           "building": str(row.get("楼栋") or "教学楼")})
+        if not rooms:
+            errors.append("教室表没有可导入的数据")
         if not errors:
             existing = {r["id"]: r for r in out.get("rooms", [])} if mode == "merge" else {}
             for r in rooms:
@@ -477,7 +512,7 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
             out["rooms"] = list(existing.values())
             summary["rooms"] = len(rooms)
 
-    if "课程配置" in wb.sheetnames:
+    if only_sheet in (None, "courses") and "课程配置" in wb.sheetnames:
         ws = wb["课程配置"]
         rows = _read_rows(ws, ["科目", "细分课程", "周课时"])
         config: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -498,6 +533,8 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
                 "kind": str(row.get("类型") or "lecture"),
             })
             summary["course_rows"] += 1
+        if not config:
+            errors.append("课程配置表没有可导入的数据")
         if not errors and config:
             out["course_config"] = dict(config)
 
@@ -507,9 +544,13 @@ def import_workbook(content: bytes, doc: dict[str, Any], mode: str = "replace") 
         scenario = Scenario.from_dict(out)
     except Exception as exc:  # noqa: BLE001
         return doc, [f"导入数据无法构建场景：{exc}"], summary
-    shape = validate_scenario_shape(scenario)
-    if shape:
-        return doc, shape, summary
+    # A sheet-specific import must be allowed to fill a blank custom scenario
+    # before the other categories exist.  Validate the global shape only for a
+    # whole-workbook import.
+    if only_sheet is None:
+        shape = validate_scenario_shape(scenario)
+        if shape:
+            return doc, shape, summary
     out = scenario.to_dict()
     out["_updated_at"] = doc.get("_updated_at")
     return out, [], summary

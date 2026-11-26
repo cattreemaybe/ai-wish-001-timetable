@@ -9,9 +9,9 @@
 ```text
 dist/
 ├── dsh-aiwish-timetable-darwin/
-│   └── dsh-aiwish-timetable-0.2.0.tgz      # macOS arm64，约 82 MB
+│   └── dsh-aiwish-timetable-0.2.1.tgz      # macOS arm64，约 82 MB
 ├── dsh-aiwish-timetable-win32/
-│   └── dsh-aiwish-timetable-0.2.0.tgz      # Windows x64，约 59 MB
+│   └── dsh-aiwish-timetable-0.2.1.tgz      # Windows x64，约 59 MB
 ├── AI-WISH-001-DSH-darwin-arm64.zip        # 分发包装（内含 tgz + 说明）
 └── AI-WISH-001-DSH-win32-x64.zip
 ```
@@ -23,7 +23,7 @@ DSH 插件管理器只接受 npm tarball（`.tgz`）、本地目录、npm 包名
 DSH 插件页 → 安装本地插件 → 选择 `.tgz`，或：
 
 ```bash
-dsh plugin --profile desktop add /absolute/path/dsh-aiwish-timetable-0.2.0.tgz
+dsh plugin --profile desktop add /absolute/path/dsh-aiwish-timetable-0.2.1.tgz
 ```
 
 然后刷新 DSH 窗口，侧边栏出现「智能排课」。

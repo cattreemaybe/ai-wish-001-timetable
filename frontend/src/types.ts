@@ -109,6 +109,7 @@ export interface Scenario {
     validation_passed: boolean | null
     is_stale: boolean
   } | null
+  is_sample?: boolean
 }
 
 export interface ScenarioSummary {
@@ -128,6 +129,7 @@ export interface ScenarioSummary {
   room_count: number
   admin_class_count: number
   latest_run?: Scenario['latest_run']
+  is_sample?: boolean
 }
 
 export interface Task {
@@ -314,4 +316,40 @@ export interface EntityOption {
   id: string
   name: string
   [key: string]: unknown
+}
+
+
+export interface PreflightItem {
+  key: string
+  label: string
+  status: 'ok' | 'warn' | 'error' | 'pending'
+  value: string
+  detail: string
+  link: string
+}
+
+export interface PreflightResult {
+  ready: boolean
+  status: 'ready' | 'warning' | 'blocked'
+  message: string
+  items: PreflightItem[]
+  blocking: string[]
+  warnings: string[]
+  analysis: {
+    students: number
+    teachers: number
+    rooms: number
+    combinations: number
+    capacity_warnings: string[]
+  }
+}
+
+export interface ImportSummary {
+  students: number
+  teachers: number
+  rooms: number
+  course_rows: number
+  duplicates: string[]
+  warnings: string[]
+  failed_rows: number
 }
